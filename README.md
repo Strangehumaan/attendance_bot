@@ -54,23 +54,8 @@ python attendance_bot.py
 - Copy `attendance_bot.py`, `config.txt` and `server_setup.sh` to `~/bot/` on the server, then run `bash ~/bot/server_setup.sh`.
 - The script checks that the portal is reachable, installs everything, and runs the bot as a `systemd` service.
 
-## Security notes
 
-Known weak spots, since this was vibecoded:
-
-| Risk | Status / what to do |
-|---|---|
-| **Portal password stored in plain text** in `config.txt` (PC + server) | `config.txt` is git-ignored and set to `chmod 600` on the server. Anyone with access to the server can still read it. |
-| **HTTPS certificate checks are off** (`ignore_https_errors=True`) | Someone intercepting the connection could read your password. Test with `curl https://sdc-sppap1.svkm.ac.in:50001/irj/portal` (no `-k`). If it works, set this to `False`. |
-| **Bot token could leak into logs** on network errors | Fixed: logs and error messages are scrubbed of the token and password. |
-| **Telegram bot token** | Anyone with it can act as the bot. If it leaks, send `/revoke` to @BotFather and update `config.txt`. |
-| **Who can control the bot** | Only your `TELEGRAM_CHAT_ID`. Messages from anyone else are ignored. |
-| **CAPTCHA screenshot** goes through Telegram and shows your student ID | Acceptable for personal use; just be aware of it. |
-| **SSH (port 22) open to the internet** | Oracle Ubuntu only allows key login. Keep your `.key` file private, and optionally limit port 22 to your IP in the security list. |
-| **Attendance PDFs and logs** saved in `reports/` and `logs/` | Git-ignored. Delete them if you're worried. |
-
-**Never commit:** `config.txt`, `*.key`, `logs/`, `reports/`. The `.gitignore` already covers these.
 
 ---
 
-Made for my own use at MPSTME Shirpur. Use it only with your own account.
+Made for my own use at MPSTME . Use it only with your own account.
