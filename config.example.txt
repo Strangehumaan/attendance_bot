@@ -1,0 +1,6 @@
+# Copy this file to config.txt and fill in your values (no spaces, no quotes).
+PORTAL_USER=
+PORTAL_PASS=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+SERVER_IP=

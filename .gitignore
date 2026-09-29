@@ -1,0 +1,21 @@
+# secrets - never commit
+config.txt
+*.key
+*.pem
+*.pub
+
+# runtime data
+logs/
+reports/
+debug/
+*.pdf
+deploy_log.txt
+last_auto_run.txt
+
+# environment / IDE
+.venv/
+venv/
+.idea/
+.vscode/
+__pycache__/
+*.pyc
