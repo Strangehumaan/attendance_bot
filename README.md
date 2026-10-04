@@ -47,7 +47,12 @@ Everyone runs their **own** copy: the bot only answers the one Telegram chat in 
    ```
 3. Copy `config.example.txt` to `config.txt` and fill it in (portal ID, password, bot token, chat ID). `config.txt` is git-ignored, so it never gets pushed.
 4. Edit the settings at the top of `attendance_bot.py`: `ACAD_YEAR`, `SEMESTER`, `START_DATE` for your semester, and `SHORT_NAMES` for your subjects (optional, unknown subjects just get a shortened name).
-5. Run it:
+5. Check your setup (optional, but it tells you exactly what's wrong if something is):
+   ```bash
+   python check_setup.py
+   ```
+   It checks `config.txt`, Telegram and the portal, then does a real login: you get the CAPTCHA on Telegram as usual. It stops after logging in. Stop the bot before running it.
+6. Run it:
 
 **On your PC**
 ```bash
