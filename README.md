@@ -38,46 +38,81 @@ The portal only shows attendance between **06:00 PM and 07:00 AM**, so outside t
 
 ## Setup
 
-Everyone runs their **own** copy: the bot only answers the one Telegram chat in its `config.txt` and logs in with that person's portal account.
+Everyone runs their **own** copy: the bot only answers the one Telegram chat in its `config.txt` and logs in with that person's portal account. `config.txt` is git-ignored, so your password never gets pushed. Never share it.
 
-1. Create a bot with [@BotFather](https://t.me/BotFather) and get your chat ID from [@userinfobot](https://t.me/userinfobot).
-2. Clone the repo:
+### 24/7 on a free Oracle Cloud server (recommended, about 30 min)
+
+The bot keeps running even when your laptop is off.
+
+**1. Make your Telegram bot**
+- Open [@BotFather](https://t.me/BotFather), send `/newbot`, and copy the **token** it gives you.
+- Open your new bot and press **Start**.
+- Open [@userinfobot](https://t.me/userinfobot) and copy your **ID** number.
+
+**2. Make an Oracle Cloud account**
+- Sign up at [oracle.com/cloud/free](https://www.oracle.com/cloud/free/). It asks for a card to verify you, but the Always Free server costs nothing.
+- ⚠️ Pick **India West (Mumbai)** or **India South (Hyderabad)** as your **Home Region**. It can't be changed later, and the portal blocks servers outside India.
+
+**3. Create the server**
+- **Menu → Compute → Instances → Create instance**
+- **Image:** Canonical **Ubuntu 22.04**
+- **Shape:** **Ampere → VM.Standard.A1.Flex** (1 OCPU, 6 GB memory is enough)
+- **Networking:** a public subnet, with **Assign a public IPv4 address** on
+- **SSH keys:** **Generate a key pair for me → Download private key**
+- Click **Create**. Once it's running, copy its **Public IP address**.
+- "Out of capacity"? Try again later or pick a different Availability Domain.
+
+**4. Connect to it** (Windows `cmd`, use your own key file name and IP, type `yes` the first time)
+```bash
+ssh -i Downloads\ssh-key-XXXX.key ubuntu@YOUR_SERVER_IP
+```
+
+**5. Get the code and add your details**
+```bash
+git clone https://github.com/Strangehumaan/attendance_bot.git ~/bot
+cp ~/bot/config.example.txt ~/bot/config.txt
+nano ~/bot/config.txt
+```
+Fill in your portal ID, portal password, bot token and Telegram ID (no spaces, no quotes). Save with **Ctrl+O → Enter → Ctrl+X**.
+
+```bash
+nano ~/bot/attendance_bot.py
+```
+At the top, set `ACAD_YEAR`, `SEMESTER` and `START_DATE` exactly as they appear in your portal. `SHORT_NAMES` is optional (unknown subjects just get a shortened name). Save the same way.
+
+**6. Install and start the bot** (5–10 min)
+```bash
+bash ~/bot/server_setup.sh
+```
+It checks the portal is reachable, installs everything, sets the clock to India time, and runs the bot as a service that restarts by itself. When it says **DONE**, you're set. If it says *"The SVKM portal blocks this server"*, the server isn't in an Indian region (step 2).
+
+**7. Test it on Telegram**
+- Send `/testlogin` and reply with the CAPTCHA letters. You should get **"Your portal ID and password work."**
+- Send `/attendance` between **6 PM and 7 AM**. Type `/` to see all commands.
+
+**Later**
+- **Update:** connect (step 4), then `cd ~/bot && git pull && sudo systemctl restart attendance-bot`
+- **Bot not replying?** `tail -20 ~/bot/logs/bot.log`
+- **SSH says "bad permissions" on the key?** In `cmd`: `icacls Downloads\ssh-key-XXXX.key /inheritance:r /grant:r "%USERNAME%:R"`
+
+### On your PC instead
+
+Works only while your PC is on and the bot window is open.
+
+1. Do step 1 above (Telegram bot) and install [Python](https://www.python.org/downloads/) (tick **Add Python to PATH**).
+2. Clone the repo (or **Code → Download ZIP** and extract it):
    ```bash
    git clone https://github.com/Strangehumaan/attendance_bot.git
    ```
-3. Copy `config.example.txt` to `config.txt` and fill it in (portal ID, password, bot token, chat ID). `config.txt` is git-ignored, so it never gets pushed.
-4. Edit the settings at the top of `attendance_bot.py`: `ACAD_YEAR`, `SEMESTER`, `START_DATE` for your semester, and `SHORT_NAMES` for your subjects (optional, unknown subjects just get a shortened name).
-5. Check your setup (optional, but it tells you exactly what's wrong if something is):
+3. Copy `config.example.txt` to `config.txt` and fill it in, then set `ACAD_YEAR`, `SEMESTER`, `START_DATE` at the top of `attendance_bot.py`.
+4. Install, check, run:
    ```bash
+   pip install -r requirements.txt
+   python -m playwright install chromium
    python check_setup.py
+   python attendance_bot.py
    ```
-   It checks `config.txt`, Telegram and the portal, then does a real login: you get the CAPTCHA on Telegram as usual. It stops after logging in. Stop the bot before running it.
-6. Run it:
-
-**On your PC**
-```bash
-pip install -r requirements.txt
-python -m playwright install chromium
-python attendance_bot.py
-```
-
-**24/7 on Oracle Cloud Always Free** (so your PC can stay off)
-- Create an Ubuntu **22.04** VM (Ampere A1) in an **Indian region** (Mumbai or Hyderabad). The portal seems to block foreign servers.
-- Put it on a **public subnet** with a public IP.
-- On the server, clone the repo into `~/bot` and create your config:
-  ```bash
-  git clone https://github.com/Strangehumaan/attendance_bot.git ~/bot
-  cp ~/bot/config.example.txt ~/bot/config.txt
-  nano ~/bot/config.txt
-  ```
-- Edit the settings in `~/bot/attendance_bot.py` too (step 4).
-- Run `bash ~/bot/server_setup.sh`. It checks that the portal is reachable, installs everything, sets the clock to India time, and runs the bot as a `systemd` service.
-
-**Updating the server** after you push changes:
-```bash
-cd ~/bot && git pull && sudo systemctl restart attendance-bot
-```
-
+   `check_setup.py` checks `config.txt`, Telegram and the portal, then does a real login (CAPTCHA on Telegram) and tells you exactly what to fix if something is wrong. Run it while the bot is stopped.
 
 
 ---
