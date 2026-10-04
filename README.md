@@ -34,12 +34,20 @@ Bot: You have missed 35 of 193 classes (81.9%)
 
 **Commands:** `/attendance` · `/refresh` (new CAPTCHA) · `/cancel`
 
+The portal only shows attendance between **06:00 PM and 07:00 AM**, so outside those hours the bot just tells you to try later.
+
 ## Setup
 
+Everyone runs their **own** copy: the bot only answers the one Telegram chat in its `config.txt` and logs in with that person's portal account.
+
 1. Create a bot with [@BotFather](https://t.me/BotFather) and get your chat ID from [@userinfobot](https://t.me/userinfobot).
-2. Copy `config.example.txt` to `config.txt` and fill it in.
-3. Edit the settings at the top of `attendance_bot.py` (`ACAD_YEAR`, `SEMESTER`, `START_DATE`, `SHORT_NAMES`).
-4. Run it:
+2. Clone the repo:
+   ```bash
+   git clone https://github.com/Strangehumaan/attendance_bot.git
+   ```
+3. Copy `config.example.txt` to `config.txt` and fill it in (portal ID, password, bot token, chat ID). `config.txt` is git-ignored, so it never gets pushed.
+4. Edit the settings at the top of `attendance_bot.py`: `ACAD_YEAR`, `SEMESTER`, `START_DATE` for your semester, and `SHORT_NAMES` for your subjects (optional, unknown subjects just get a shortened name).
+5. Run it:
 
 **On your PC**
 ```bash
@@ -51,8 +59,19 @@ python attendance_bot.py
 **24/7 on Oracle Cloud Always Free** (so your PC can stay off)
 - Create an Ubuntu **22.04** VM (Ampere A1) in an **Indian region** (Mumbai or Hyderabad). The portal seems to block foreign servers.
 - Put it on a **public subnet** with a public IP.
-- Copy `attendance_bot.py`, `config.txt` and `server_setup.sh` to `~/bot/` on the server, then run `bash ~/bot/server_setup.sh`.
-- The script checks that the portal is reachable, installs everything, and runs the bot as a `systemd` service.
+- On the server, clone the repo into `~/bot` and create your config:
+  ```bash
+  git clone https://github.com/Strangehumaan/attendance_bot.git ~/bot
+  cp ~/bot/config.example.txt ~/bot/config.txt
+  nano ~/bot/config.txt
+  ```
+- Edit the settings in `~/bot/attendance_bot.py` too (step 4).
+- Run `bash ~/bot/server_setup.sh`. It checks that the portal is reachable, installs everything, sets the clock to India time, and runs the bot as a `systemd` service.
+
+**Updating the server** after you push changes:
+```bash
+cd ~/bot && git pull && sudo systemctl restart attendance-bot
+```
 
 
 
