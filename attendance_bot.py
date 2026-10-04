@@ -17,6 +17,8 @@ CAPTCHA_REPLY_MIN = 15                # how long to wait for your CAPTCHA reply
 MAX_CAPTCHA_TRIES = 3
 WARN_BELOW = 80                       # subjects under this % get a "!"
 HEADLESS = True                        # False = show the browser window on your PC
+OPEN_FROM  = datetime.time(18, 0)     # portal lets you view attendance only from 06:00 PM...
+OPEN_UNTIL = datetime.time(7, 0)      # ...until 07:00 AM (next morning)
 SHORT_NAMES = {                       # short names for the table
     "technical writing": "Tech Writing",
     "distributed computing": "Distributed Comp",
@@ -319,7 +321,17 @@ def summary(rows):
         msg += f"\n{total['NU']} class(es) not updated on the portal yet (not counted)."
     return msg
 
+def portal_open(now=None):
+    """True between OPEN_FROM and OPEN_UNTIL (the window crosses midnight)."""
+    t = (now or datetime.datetime.now()).time()
+    return t >= OPEN_FROM or t < OPEN_UNTIL
+
 def run_report(reason):
+    if not portal_open():
+        log("Refused, outside viewing hours:", reason)
+        TG.send(f"The portal doesn't allow viewing attendance right now. "
+                f"Please try between {OPEN_FROM:%I:%M %p} and {OPEN_UNTIL:%I:%M %p}.")
+        return
     log("Run started:", reason)
     TG.send("Opening the portal...")
     pdf_path = REPORTS / f"attendance_{datetime.date.today()}.pdf"
@@ -332,6 +344,8 @@ def run_report(reason):
     except Exception as e:
         log("FAILED:", traceback.format_exc())
         TG.send(scrub(f"Attendance bot failed: {e}\nSend /attendance to try again."))
+    finally:
+        pdf_path.unlink(missing_ok=True)   # PDF is only needed to build the message
 
 # ---------------- main loop ----------------
 def main():
