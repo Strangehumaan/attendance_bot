@@ -85,6 +85,17 @@ class Telegram:
         except Exception as e:
             log("photo failed:", e)
 
+    def set_commands(self):
+        """Show the command list when you type / in Telegram."""
+        commands = [{"command": "attendance", "description": "Get your attendance report"},
+                    {"command": "refresh", "description": "Send a new CAPTCHA"},
+                    {"command": "cancel", "description": "Stop the current request"},
+                    {"command": "help", "description": "How to use this bot"}]
+        try:
+            requests.post(f"{self.api}/setMyCommands", json={"commands": commands}, timeout=20)
+        except Exception as e:
+            log("set_commands failed:", e)
+
     def skip_old_messages(self):
         """Ignore anything sent while the bot was off."""
         try:
@@ -354,6 +365,7 @@ def main():
     except OSError:
         log("Bot already running, exiting."); return
     TG.skip_old_messages()
+    TG.set_commands()
     log("Bot started")
     while True:
         try:
@@ -361,7 +373,9 @@ def main():
                 if CMD_ATTENDANCE.match(text):
                     run_report("requested on Telegram")
                 elif text.lower().startswith(("/start", "/help")):
-                    TG.send("Send /attendance to get your attendance report.")
+                    TG.send("Send /attendance to get your attendance report "
+                            f"(works {OPEN_FROM:%I:%M %p} to {OPEN_UNTIL:%I:%M %p}).\n"
+                            "While logging in: /refresh = new CAPTCHA, /cancel = stop.")
         except Exception:
             log("loop error:", traceback.format_exc()); time.sleep(10)
 
