@@ -3,7 +3,7 @@
 Send /attendance to your bot  ->  it opens the SVKM portal, fills your login,
 sends you the CAPTCHA picture, you reply with the letters, and it sends back
 your attendance table.
-Commands:  /attendance   /refresh (new CAPTCHA)   /cancel
+Commands:  /attendance   /refresh (new CAPTCHA)   /cancel   /testlogin
 """
 import re, sys, html, time, socket, datetime, pathlib, traceback, collections, requests, pdfplumber
 from playwright.sync_api import sync_playwright
@@ -90,6 +90,7 @@ class Telegram:
         commands = [{"command": "attendance", "description": "Get your attendance report"},
                     {"command": "refresh", "description": "Send a new CAPTCHA"},
                     {"command": "cancel", "description": "Stop the current request"},
+                    {"command": "testlogin", "description": "Check your portal ID and password"},
                     {"command": "help", "description": "How to use this bot"}]
         try:
             requests.post(f"{self.api}/setMyCommands", json={"commands": commands}, timeout=20)
@@ -124,6 +125,9 @@ TG = Telegram(CFG["TELEGRAM_BOT_TOKEN"])
 
 class Cancelled(Exception):
     pass
+
+class LoginFailed(Cancelled):
+    """Portal rejected every try: wrong CAPTCHA, or wrong ID/password."""
 
 def wait_for_reply(minutes):
     """Wait for your next message. Returns the text, or None on timeout."""
@@ -180,7 +184,7 @@ def captcha_picture(page):
     except Exception:
         return page.screenshot()
 
-def login_with_relay(page):
+def login_with_relay(page, done_msg="Logged in. Getting your report..."):
     """Fill ID + password, send you the CAPTCHA picture, type your reply."""
     attendance_tab = page.get_by_role("cell", name="Attendance Display for Students", exact=True)
     for attempt in range(1, MAX_CAPTCHA_TRIES + 1):
@@ -199,7 +203,7 @@ def login_with_relay(page):
                 page.locator("#refresh").click(); page.wait_for_timeout(1500)
                 TG.send_photo(captcha_picture(page), "New CAPTCHA. Reply with the letters.")
                 continue
-            if CMD_ATTENDANCE.match(reply):
+            if CMD_ATTENDANCE.match(reply) or reply.lower().startswith("/testlogin"):
                 TG.send("Already working on it. Reply with the CAPTCHA letters.")
                 continue
             break
@@ -208,14 +212,25 @@ def login_with_relay(page):
         try:
             attendance_tab.wait_for(timeout=25_000)
             log("Logged in")
-            TG.send("Logged in. Getting your report...")
+            TG.send(done_msg)
             return attendance_tab
         except Exception:
             log("Login failed, attempt", attempt)
             if attempt < MAX_CAPTCHA_TRIES:
                 TG.send("That didn't work (wrong CAPTCHA?). Here's a new one.")
                 page.goto(URL)
-    raise Cancelled("Login failed after several tries. Send /attendance to try again.")
+    raise LoginFailed("Login failed after several tries. Send /attendance to try again.")
+
+def test_login():
+    """Log in and stop, no report. Used by /testlogin and check_setup.py."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=HEADLESS, channel="chromium")
+        page = browser.new_context(ignore_https_errors=True).new_page()
+        try:
+            page.goto(URL)
+            login_with_relay(page, done_msg="Logged in. Your portal ID and password work.")
+        finally:
+            browser.close()
 
 def download_report(pdf_path):
     end_date = datetime.date.today().strftime("%d.%m.%Y")
@@ -358,6 +373,22 @@ def run_report(reason):
     finally:
         pdf_path.unlink(missing_ok=True)   # PDF is only needed to build the message
 
+def run_login_test():
+    log("Login test started")
+    TG.send("Testing your portal login...")
+    try:
+        test_login()
+        log("Login test passed")
+    except LoginFailed as e:
+        log("Login test failed:", e)
+        TG.send("Login failed after several tries. If the CAPTCHA was right, "
+                "check PORTAL_USER and PORTAL_PASS in config.txt.")
+    except Cancelled as e:
+        log("Stopped:", e); TG.send(str(e))
+    except Exception as e:
+        log("FAILED:", traceback.format_exc())
+        TG.send(scrub(f"Login test failed: {e}"))
+
 # ---------------- main loop ----------------
 def main():
     try:   # only one copy of the bot at a time
@@ -372,10 +403,13 @@ def main():
             for text in TG.poll(wait=25):
                 if CMD_ATTENDANCE.match(text):
                     run_report("requested on Telegram")
+                elif text.lower().startswith("/testlogin"):
+                    run_login_test()
                 elif text.lower().startswith(("/start", "/help")):
                     TG.send("Send /attendance to get your attendance report "
                             f"(works {OPEN_FROM:%I:%M %p} to {OPEN_UNTIL:%I:%M %p}).\n"
-                            "While logging in: /refresh = new CAPTCHA, /cancel = stop.")
+                            "While logging in: /refresh = new CAPTCHA, /cancel = stop.\n"
+                            "/testlogin = check your portal ID and password work.")
         except Exception:
             log("loop error:", traceback.format_exc()); time.sleep(10)
 

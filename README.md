@@ -32,7 +32,7 @@ Bot: You have missed 35 of 193 classes (81.9%)
 4. It grabs the PDF report, parses it with `pdfplumber`, and merges theory and practical per subject.
 5. It replies with the table. `!` marks subjects below 80%.
 
-**Commands:** `/attendance` · `/refresh` (new CAPTCHA) · `/cancel`
+**Commands:** `/attendance` · `/refresh` (new CAPTCHA) · `/cancel` · `/testlogin` (check your portal ID and password; logs in and stops)
 
 The portal only shows attendance between **06:00 PM and 07:00 AM**, so outside those hours the bot just tells you to try later.
 

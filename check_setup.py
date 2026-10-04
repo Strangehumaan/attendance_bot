@@ -62,21 +62,16 @@ except Exception:
     fail("Can't reach the SVKM portal. Check your internet. Servers outside India are blocked.")
 ok("Portal is reachable")
 
-# 5. real login (you solve the CAPTCHA on Telegram)
-from playwright.sync_api import sync_playwright
+# 5. real login (you solve the CAPTCHA on Telegram), same check as /testlogin
 print("...    Sending you the CAPTCHA on Telegram, reply with the letters.")
 bot.TG.skip_old_messages()
 try:
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=bot.HEADLESS, channel="chromium")
-        page = browser.new_context(ignore_https_errors=True).new_page()
-        try:
-            page.goto(bot.URL)
-            bot.login_with_relay(page)
-        finally:
-            browser.close()
+    bot.test_login()
+except bot.LoginFailed:
+    fail("Login failed after several tries. If the CAPTCHA was right, "
+         "check PORTAL_USER and PORTAL_PASS in config.txt.")
 except bot.Cancelled as e:
-    fail(f"{e} If the CAPTCHA was right, check PORTAL_USER and PORTAL_PASS in config.txt.")
+    fail(str(e))
 except Exception as e:
     fail(bot.scrub(f"Browser problem: {e}\nDid you run: python -m playwright install chromium"))
 ok("Logged in to the portal")
